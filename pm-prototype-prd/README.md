@@ -1,4 +1,4 @@
-# 🎨 PM Prototype PRD — 高保真交互原型 + 需求规格说明书生成器
+<img width="1625" height="845" alt="image" src="https://github.com/user-attachments/assets/2bce8742-c8f2-435c-abfe-93a7597f1b14" /><img width="1625" height="845" alt="image" src="https://github.com/user-attachments/assets/3ff015df-7770-4a6a-800e-1a590cd393e6" /># 🎨 PM Prototype PRD — 高保真交互原型 + 需求规格说明书生成器
 
 > 一个为 **WorkBuddy AI** 平台设计的智能 Skill，输入文字需求或参考截图，输出**可交互的 HTML 高保真原型**，并能基于原型注释**一键生成完整的需求规格说明书（PRD）**。
 
@@ -12,7 +12,8 @@
 
 | 原型模式 | 注释系统 | PRD 输出 |
 |---------|---------|---------|
-| 输入需求文字 → 生成可点击交互原型，按钮点击/弹窗/分页全部可用 | 每项功能带墨刀风格彩色徽章标注，点击弹出交互/业务/权限/异常说明 | 基于原型注释自动映射为需求文档，包含功能详述、数据字典、权限矩阵等 |
+| 输入需求文字 → 生成可点击交互原型，按钮点击/弹窗/分页全部可用 | 每项功能带墨刀风格彩色徽章标注，点击弹出交互/业务/权限/异常说明 | 基于原型注释自动映射为需求文档，包含功能详述、数据字典、权限矩阵等 |<img width="1625" height="845" alt="image" src="https://github.com/user-attachments/assets/ae8b6af0-2786-45c8-bb29-8a28e44bd514" />
+
 
 ---
 
