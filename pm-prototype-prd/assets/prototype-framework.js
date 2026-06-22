@@ -32,10 +32,20 @@
 
   // 存储所有注释
   let _annotations = [];
-  let _nextId = 1;
   let _selectionActive = false;
   let _addAnnotationActive = false;
   let _panelVisible = true;
+
+  // ============================================================
+  // 获取下一个可用的注释编号（修复：删除后自动复用被删掉的编号）
+  // ============================================================
+  function getNextAnnotationId() {
+    if (_annotations.length === 0) return 1;
+    const used = new Set(_annotations.map(a => a.id));
+    let n = 1;
+    while (used.has(n)) n++;
+    return n;
+  }
 
   // ============================================================
   // 初始化
@@ -693,10 +703,10 @@
   }
 
   // ============================================================
-  // 添加注释
+  // 添加注释（修复：使用 getNextAnnotationId 复用已删除的编号）
   // ============================================================
   function addAnnotation(opts) {
-    const id = _nextId++;
+    const id = getNextAnnotationId();
     const defaultOpts = {
       id: id,
       title: '未命名注释',
@@ -1212,7 +1222,6 @@
   // ============================================================
   function clearAnnotations() {
     _annotations = [];
-    _nextId = 1;
     const container = document.getElementById('aptMarkerContainer');
     if (container) container.innerHTML = '';
     renderPanel();
