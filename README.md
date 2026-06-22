@@ -1,6 +1,6 @@
-># 🎨 PM Prototype PRD — 高保真交互原型 + 需求规格说明书生成器
+# 🎨 PM Prototype PRD — 高保真交互原型 + 需求规格说明书生成器
 
-> 一个为 **WorkBuddy AI** 平台设计的智能 Skill，输入文字需求或参考截图，输出**可交互的 HTML 高保真原型**，并能基于原型注释**一键生成完整的需求规格说明书（PRD）**。
+一个为 **WorkBuddy AI** 平台设计的智能 Skill，输入文字需求或参考截图，输出**可交互的 HTML 高保真原型**，并能基于原型注释**一键生成完整的需求规格说明书（PRD）**。
 
 [![WorkBuddy Skill](https://img.shields.io/badge/WorkBuddy-Skill-blue)](https://www.codebuddy.cn/docs/workbuddy/Overview)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -77,7 +77,7 @@ PRD 模板综合 **腾讯、阿里巴巴、京东** 等大厂格式，覆盖：
 
 ```bash
 # 克隆仓库
-git clone https://github.com/YOUR_USERNAME/pm-prototype-prd.git
+git clone https://github.com/superzhangj/pm-prototype-prd.git
 
 # 复制到 WorkBuddy Skills 目录
 # Windows:
@@ -106,6 +106,7 @@ cp -r pm-prototype-prd ~/.workbuddy/skills/
 pm-prototype-prd/
 ├── README.md                           # 本文件
 ├── SKILL.md                            # WorkBuddy Skill 主指令文件
+├── CHANGELOG.md                        # 版本更新记录
 ├── assets/
 │   └── prototype-framework.js          # 注释引擎 + 框选工具 + 面板（核心 JS）
 └── references/
@@ -131,4 +132,13 @@ pm-prototype-prd/
 
 ## 🤝 贡献
 
-欢迎提交 Issue 和 PR！如果你有好的 PRD 模板改进建议或原型交互优化，欢迎一起完善。
+感谢社区提交的 Issue 和 PR。如果你有好的 PRD 模板改进建议或原型交互优化，欢迎一起完善。
+
+---
+
+## 📋 更新日志
+
+### v1.0.1 (2026-06-22)
+- **Bug 修复**：删除注释后新增，编号不再继续递增，改为自动复用已删除的编号
+- **结构优化**：项目文件从子目录移到了仓库根目录，`git clone` 后直接可见 README 和 SKILL
+- 更多历史版本请查看 [CHANGELOG.md](CHANGELOG.md)
