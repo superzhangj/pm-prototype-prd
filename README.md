@@ -138,6 +138,16 @@ pm-prototype-prd/
 
 ## 📋 更新日志
 
+### v1.1.0 (2026-06-25)
+- **✨ 新增功能**：注释质量标准体系（数据逻辑/交互行为/边界情况检查清单 + 结构化格式规范）
+- **✨ 新增功能**：Annotation Coverage Rules 增强，每种组件类型增加补充要求列
+- **✨ 新增功能**：工具栏「🔵 注释标记」一键隐藏/显示按钮
+- **🐛 Bug 修复**：注释注册时序竞争（__onAnnotationsReady → 轮询等待模式）
+- **🐛 Bug 修复**：标记位置偏移（注册外层包裹 requestAnimationFrame）
+- **🐛 Bug 修复**：选择器匹配多个元素导致定位错误
+- **🐛 Bug 修复**：Step 4 中 preview_url → present_files
+- **🎨 样式调整**：注释配色对齐上一版（interaction #1677ff, edgecase #ff4d4f）
+
 ### v1.0.1 (2026-06-22)
 - **Bug 修复**：删除注释后新增，编号不再继续递增，改为自动复用已删除的编号
 - **结构优化**：项目文件从子目录移到了仓库根目录，`git clone` 后直接可见 README 和 SKILL
