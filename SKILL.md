@@ -198,7 +198,24 @@ Follow the template pattern in `references/prototype-guide.md`. The output is a 
 3. Register annotations using **`window.__onAnnotationsReady`** 回调函数（**禁止使用 DOMContentLoaded**，因为框架初始化顺序存在竞争关系）：
    - **`__addAnnotation({ x, y, ... })`** — 手动指定视口坐标 (通用模式)
    - **`__addAnnotationOn(selector, position, opts)`** — 相对目标元素自动定位 (推荐模式)
-4. 注释注册代码必须放在 `window.__onAnnotationsReady = function() { ... }` 内部，框架会在初始化完成后自动调用此回调。
+4. 注释注册代码推荐使用**轮询等待模式**（替代原 `__onAnnotationsReady` 回调方式，避免 DOMContentLoaded 时序竞争）：
+```js
+(function() {
+  function register() {
+    if (typeof window.__addAnnotationOn !== 'function') {
+      setTimeout(register, 50);  // 每50ms重试，直到框架就绪
+      return;
+    }
+    // 框架就绪，开始注册注释
+    window.__addAnnotationOn('#target-selector', 'right', {
+      title: '注释标题',
+      description: '注释内容',
+      type: 'business'
+    });
+  }
+  register();
+})();
+```
    - **拖拽标记**：按住注释标记（圆形徽章）拖拽即可重新定位
    - **删除注释**：在右侧注释面板中，每项注释末尾的✕按钮可删除注释（卡片上不提供删除按钮以避免事件冲突）
    - **展开卡片**：注释卡片标题栏⛶按钮可展开/缩小卡片（180px↔600px）
@@ -211,17 +228,59 @@ Follow the template pattern in `references/prototype-guide.md`. The output is a 
 
 #### Annotation Coverage Rules
 
-| Component Type | Required Annotation Types |
-|---------------|--------------------------|
-| Search input | interaction, edgecase(empty result) |
-| Data table / List | interaction(pagination/sort), business(sorting logic), edgecase(empty/error) |
-| Form / Modal | interaction(fields/validation/submit), edgecase(error/duplicate/timeout) |
-| Buttons (add/edit/delete) | interaction(click flow), business(data rules), permission(who can see/click) |
-| Navigation menu | interaction(route), permission(menu visibility per role) |
-| Approval workflow | business(flow), permission(approval role), edgecase(reject/recall) |
-| Charts / Statistics | business(data source/calculation), edgecase(no data) |
-| Upload component | interaction(drag/click), edgecase(file type/size/network) |
-| Permission-restricted area | permission(role-based), edgecase(no access state) |
+| Component Type | Required Annotation Types | 补充要求 |
+|---------------|--------------------------|---------|
+| Search input | interaction, edgecase(empty result) | 说明搜索的数据范围和匹配规则 |
+| Data table / List | interaction(pagination/sort), business(sorting logic), edgecase(empty/error) | 必须包含【数据来源】【排序规则】【字段字典】 |
+| Form / Modal | interaction(fields/validation/submit), edgecase(error/duplicate/timeout) | 必须列出所有字段的名称、类型、格式、必填/选填 |
+| Buttons (add/edit/delete) | interaction(click flow), business(data rules), permission(who can see/click) | 说明触发条件、后置影响、失败处理 |
+| Navigation menu | interaction(route), permission(menu visibility per role) | — |
+| Approval workflow / Timeline | business(flow), permission(approval role), edgecase(reject/recall) | 必须说明数据来源（完整预定义节点 vs 仅已流转）、排序规则（正序/倒序）、每个节点的字段组成 |
+| Charts / Statistics | business(data source/calculation), edgecase(no data) | 说明数据计算逻辑和统计口径 |
+| Upload component | interaction(drag/click), edgecase(file type/size/network) | — |
+| Permission-restricted area | permission(role-based), edgecase(no access state) | — |
+| Detail card / Form display | interaction, edgecase(empty/error) | 必须列出所有展示字段的字段清单 |
+
+#### Annotation Quality Standards (注释质量标准)
+
+每条注释必须遵循 **「三个问题」原则**：回答"数据从哪来"、"按什么排序"、"字段有哪些"。
+
+**核心检查清单：**
+
+1. **数据逻辑检查**（business/edgecase 类型）
+   - [ ] 数据来源：静态预定义还是动态查询？是否支持分页？
+   - [ ] 数据范围：展示全部数据还是按条件过滤？过滤条件是什么？
+   - [ ] 排序规则：默认排序字段？升序还是降序？用户能否自定义？
+   - [ ] 字段定义：每条数据包含哪些字段？各自的类型、格式、必填/选填？
+
+2. **交互行为检查**（interaction 类型）
+   - [ ] 触发条件：什么条件下可操作？是否需要权限？
+   - [ ] 处理流程：点击后发生了什么？有无确认弹窗？
+   - [ ] 后置影响：操作完成后数据/页面状态如何变化？
+   - [ ] 失败处理：网络超时、权限不足、数据冲突时如何提示？
+
+3. **边界情况检查**（edgecase 类型）
+   - [ ] 空数据态：无数据时页面显示什么？
+   - [ ] 加载态：数据加载中显示什么？
+   - [ ] 错误态：接口报错时如何展示？
+   - [ ] 异常流转：暂停、驳回、撤回等异常状态如何处理？
+
+**注释内容格式规范：**
+
+使用结构化段落，每条注释的 `description` 按以下模板组织：
+
+```
+【数据逻辑】数据来源 + 数据范围说明
+【排序规则】排序依据 + 升序/降序
+【字段组成】字段1 + 字段2 + ...（各字段的格式说明）
+【业务规则】触发条件 → 处理流程 → 结果/输出
+【边界异常】异常条件 → 系统行为 → 用户感知
+```
+
+**禁止行为：**
+- ❌ 只写视觉表现不写逻辑（如"已完成绿色，当前蓝色"→ 缺少数据来源和排序规则）
+- ❌ 字段说明模糊（如"展示审批记录" → 应明确列出所有字段）
+- ❌ 遗漏 edgecase 注释（数据展示类组件必须有空数据/错误态注释）
 
 #### Interaction Fidelity
 
@@ -253,7 +312,7 @@ The selection tool captures user modifications and returns them via clipboard + 
    - 新增或更新该区域对应的注释（更新注释内容，或新增注释）
    - 更新顶部版本标注栏，增加一条变更记录（版本号升版，如 V1.0→V1.1）
    - 框选区域用高亮边框标记修改后的区域
-6. **重新预览**：通过 `preview_url` 工具呈现更新后的 HTML 页面
+6. **重新交付**：通过 `present_files` 工具呈现更新后的 HTML 页面
 
 **重要**：框选工具的输出是**结构化文本消息**，必须由用户粘贴回对话框才能让 AI 执行修改。这是前端 → AI 之间的数据桥接机制。
 
