@@ -1,13 +1,24 @@
 ---
 name: pm-prototype-prd
 description: >
-  高保真交互式HTML原型 + 墨刀式页面内嵌注释标注系统。输入文字需求或参考截图，输出可直接运行和点击交互的HTML原型页面，所有功能注释、业务逻辑、边界说明直接标注在页面组件上（类似墨刀/Axure的批注样式）。支持框选工具实现局部迭代修改、参考图UI样式1:1复刻、多端自适应原型（PC/APP/小程序/H5）。
-  基于原型及其注释，可一键输出完整的需求规格说明书（PRD），模板参考腾讯、阿里、京东等大厂格式，注释自动映射为功能需求条目。
-  This skill should be used when the user requests prototype design, HTML prototype, page mockup, interactive prototype, UI mockup, product design iteration, requirements annotation, or any product management visualization deliverable. Triggers: 原型, HTML原型, 交互原型, 页面设计, 高保真原型, 注释标注, 框选修改, 墨刀样式, 新功能设计, 页面迭代, 需求文档, PRD, 需求规格说明书, 需求文档输出.
+  **产品需求文档（PRD）+ 交互原型 一体化工作流。** 当用户提出"需求说明/需求说明书/写需求/业务需求/输出需求文档/需求分析/整理需求/PRD/需求规格说明书"等请求时，**优先使用本技能**（而非 feature-spec），因为本技能覆盖了从结构化需求文档（背景→目标→详细需求→功能价值）到高保真HTML交互原型（墨刀式页面内嵌标注、框选迭代、参考图复刻）的完整链路，功能远超纯文档生成。
+  核心能力：阶段一（用户说"需求说明/写需求"时触发）→ 生成Word格式业务需求文档；用户确认后进入阶段二 → 生成可交互HTML原型，所有功能注释、业务逻辑、边界说明直接标注在页面组件上（墨刀/Axure批注样式），基于标注可一键输出完整详细设计PRD。
+  额外支持：画原型/HTML原型/交互原型/页面设计/设计界面/墨刀样式/框选修改/参考图复刻/原型→输出PRD/页面迭代/局部修改。
+  Disambiguation: 用户说"需求说明"/"需求文档"/"PRD"时本技能优先级高于 feature-spec，因为本技能产出物更全面（文档+原型+标注），且支持后续迭代。
 agent_created: true
 ---
 
 # High-Fidelity Interactive Prototype + In-Page Annotation System
+
+## ⚠️ 技能优先级声明（CRITICAL — 每次加载必读）
+
+**当用户请求包含以下关键词时，本技能优先级高于 feature-spec / product-management-workflows 等其他产品管理类技能：**
+
+- "需求说明" / "需求说明书" / "输出需求" / "写需求" / "整理需求" / "需求文档"
+- "PRD" / "需求规格说明书" / "业务需求"
+- "画原型" / "原型" / "页面设计" / "设计界面" / "交互原型"
+
+**原因**：本技能覆盖「结构化需求文档 + 交互原型 + 标注 + PRD输出」的完整链路，产出物远多于纯文档生成技能。用户选 feature-spec 只能得到一份文档，选本技能可以得到文档 + 可点击的原型 + 可迭代的标注系统。始终优先加载本技能。
 
 ## Purpose
 
@@ -21,7 +32,8 @@ Generate a single, self-contained, interactive HTML prototype page that:
 ## When to Use
 
 Invoke when the user's request contains:
-- "画原型" / "原型" / "prototype" / "mockup"
+- "需求说明书" / "需求说明" / "业务需求" / "写需求" / "整理需求" / "转化成需求" — **Path A：先出业务需求文档**
+- "画原型" / "原型" / "prototype" / "mockup" — **Path B：直接出原型**
 - "HTML原型" / "交互原型" / "可点击"
 - "设计个页面" / "帮我画个页面" / "设计个界面"
 - "注释" / "标注" / "批注" / "annotate"
@@ -31,7 +43,201 @@ Invoke when the user's request contains:
 - "基于原型输出文档" / "根据这个原型写文档" / "出个需求文档"
 - Any request describing a new page, feature, or UI change
 
-## Workflow
+---
+
+## 入口分流：需求说明书 vs 直接原型
+
+技能加载后，**第一步必须判断用户意图**，决定走哪条路径。
+
+### 判断规则
+
+| 用户请求关键词 | 路径 |
+|--------------|------|
+| "需求说明书" / "需求说明" / "业务需求" / "需求文档" / "写需求" / "整理需求" / "转化成需求" / "需求说明文档" | **Path A：先出业务需求文档 → 确认 → 再出原型** |
+| "原型" / "画原型" / "prototype" / "生成原型" / "设计页面" / "交互原型" / "HTML原型" / "做原型" | **Path B：跳过需求文档，直接生成原型 + 注释** |
+
+> **关键区分**：用户说"帮我写个需求说明" → Path A；用户说"帮我画个原型" → Path B。
+> 如果用户同时提到"需求"和"原型"（如"帮我整理需求然后出原型"），走 Path A。
+> Path A 仅适用于**全新需求 (0→1)** 场景。小功能迭代、局部修改、参考图复刻、原型→输出PRD 等场景直接走 Path B。
+
+---
+
+## Path A：业务需求文档 → 用户确认 → 原型 + PRD
+
+当用户意图是"先出需求说明书"时，按以下流程执行。
+
+### Step A0：已有系统截图检测与分析
+
+在执行需求要素检查之前，**先检查用户是否上传了已有系统的截图**。
+
+#### A0.1 截图检测规则
+
+| 用户输入形式 | 如何处理 |
+|-------------|---------|
+| 消息中直接附带了截图文件（如 @image, PNG/JPG） | **必须使用 Read 工具读取该图片**，分析已有系统模块 |
+| 消息中提到了"原来系统"/"现有系统"/"目前系统"等字眼，但没看到图片 | **主动询问"能否把现有系统的截图发一下？"** |
+| 用户明确说"没有截图"/"全新功能" | 跳过 A0，直接进入 A1 |
+
+#### A0.2 已有系统分析输出
+
+用 Read 工具读取截图后，**必须先输出两份分析**，再进入需求要素检查：
+
+**第一份：功能分析**
+
+```
+📸 已有系统分析
+
+整体布局: {导航/侧边栏/内容区的大致结构}
+核心模块: {列表出页面中现有的功能模块，如筛选栏、数据表格、操作按钮等}
+当前支持的实体/规则: {截图里看得到的业务实体及其参数}
+存在的问题/可改进点: {从截图中可见的不足，如缺少字段、无人数限制等}
+```
+
+**第二份：设计规范提取（关键！后续原型复用）**
+
+从系统截图中提取 UI 设计规范，**格式与下方「Step 0.2 参考图设计提取清单」完全一致**（CSS 变量表 + 组件样式摘要）。这批样式数据将在后续原型生成时直接复用，无需用户再提供参考图。
+
+```
+📐 从系统截图提取的设计规范
+
+主色: #1677ff | 背景: #f0f2f5 | 文字: #262626
+字体: PingFang SC 14px | 圆角: 6px | 阴影: 0 2px 8px rgba(0,0,0,0.08)
+
+组件样式:
+- 导航栏: 高度56px, 白色背景, 底部1px边框
+- 筛选区: 白色卡片, 圆角8px, padding 20px
+- 按钮: 蓝色填充(主色) / 白色边框(次), 圆角6px, 高度32px
+- 表格: 表头灰底#fafafa, 行悬浮变灰
+- 输入框: 高度32px, 边框#d9d9d9, focus蓝色边框+阴影
+- 分页: 白色按钮+边框, active蓝色填充
+```
+
+> **⚠️ 关键规则：系统截图 = 原型样式参考**
+>
+> 用户在 Path A 中提供的系统截图具有**双重用途**：
+> 1. 功能分析：了解当前系统有什么、缺什么 → 用于需求文档
+> 2. **样式参考：提取 UI 设计规范** → 后续生成原型时，原型的视觉风格必须与系统截图保持一致
+>
+> 后续进入原型生成阶段（Step A4 → Step 0）时，**系统截图自动作为参考图**，无需重复询问用户。如果原型的某个功能在截图中没有对应的组件样式（如截图里没有弹窗），则用截图中已有的组件风格（颜色、圆角、字号）推断。
+
+### Step A1：需求要素检查与收集（必须执行）
+
+在生成业务需求文档之前，检查用户是否提供了以下需求要素。分为**必问要素**（①②，缺一不可）和**条件要素**（③④，可推断时跳过）。
+
+| # | 要素 | 要求 | 缺失时的追问 |
+|---|------|------|-------------|
+| ① | 新增需求说明 | **必问**，用户必须提供 | "要新增或改造什么功能？具体有哪些规则、实体或参数？" |
+| ② | 业务背景/痛点 | **必问**，用户必须亲口确认 | "当前系统存在什么问题或痛点？为什么需要做这个需求？" |
+| ③ | 目标用户/角色 | **条件追问**——用户消息中已隐含角色（如"考勤模块"→HR/管理员）则跳过；否则追问 | "谁会使用这个功能？是管理员统一配置，还是员工自助操作？" |
+| ④ | 使用频率/规模 | **条件追问**——用户消息中已隐含规模（如"全公司排班"→大规模）则跳过；否则追问 | "大概涉及多少人？多久操作一次？（如每月排一次200人，还是每周10人）" |
+
+#### 要素判断规则
+
+| 要素 | 已提供（跳过追问）的条件 |
+|------|----------------------|
+| ① 需求说明 | 用户消息中描述了具体功能、实体、规则 |
+| ② 业务背景 | 用户消息中明确描述了痛点或为什么做（如"手动排班太慢，每周花半天"） |
+| ③ 目标用户 | 用户消息中隐含了角色（如"考勤模块""后台管理""员工端"等可推断受众） |
+| ④ 使用频率 | 用户消息中隐含了规模（如"全公司""日常排班""月度排班"等可推断量级） |
+
+> **关键规则：要素② 必须由用户亲口确认，不允许用截图分析代替**
+>
+> 截图分析（Step A0）只能看到"当前系统有什么"，看不出"用户真正痛在哪里、为什么需要改"。
+> 即使截图分析已经列出了系统层面的可改进点，**也必须向用户追问业务背景/痛点**，不得跳过。
+
+**如果用户未完整提供必问要素（①②）或无法推断的条件要素（③④）** → 使用 AskUserQuestion 收集缺失信息：
+
+- 仅缺① → 追问需求说明（提供 3-4 个选项 + 自定义输入框）
+- 仅缺② → 追问业务背景（提供 3-4 个具体业务场景选项，**必须贴合用户已描述的需求领域**）
+- 仅缺③ → 追问目标角色（提供 3-4 个选项，如"HR/管理员统一配置""部门组长各自管理""员工自助排班""多角色混合使用"）
+- 仅缺④ → 追问使用规模（提供 3-4 个选项，如"每周排班，10-50人""每月排班，50-200人""一次性配置，200人以上""规则配置后自动运行，很少手动干预"）
+- 缺多个要素 → 合并为一轮追问（最多 4 个问题），**先问必问①②，再问条件③④**
+
+**AskUserQuestion 使用规则（必须遵守）**：
+1. **每个问题必须提供 3-4 个具体选项**，不能只让用户手动输入
+2. **选项必须贴合用户已描述的需求场景**，不能是如"效率不高""体验不好"等泛泛表述
+3. 选项应覆盖最可能的情况 + 一个"其他"自由输入通道（由 AskUserQuestion 工具自动提供）
+4. 问题 header 不超过 12 字符，选项 label 不超过 8 字符
+
+**禁止行为**：要素不齐就跳过直接生成文档。禁止只用一行文字提问而不提供选项。
+
+### Step A2：生成业务需求文档（Word 格式）
+
+根据用户提供的需求信息（如 Step A0 有截图分析则结合分析结果），生成结构化的**业务需求文档**，**输出为 Word 文档（`.docx` 格式）**。
+
+#### 输出格式
+
+必须使用 **docx skill**（python-docx）生成 Word 文档，固定使用以下四章结构：
+
+**标题**：`{需求标题}功能需求说明`
+
+| 章节 | 标题 | 内容要求 |
+|------|------|---------|
+| 一 | 需求背景 | 当前系统缺少什么？为什么需要做？从问题切入，不堆砌功能。1-2段讲清楚。如有原有系统截图分析（Step A0），必须结合分析结果描述。 |
+| 二 | 需求目标 | 1. 核心能力升级 / 2. 新增/改造内容 / 3. 约束与规范 |
+| 三 | 详细功能需求 | （一）核心系统能力 / （二）新增/改造内容及差异化规则 / （三）通用约束规则 |
+| 四 | 功能价值 | 1-3条价值点 |
+
+#### Word 文档排版规范
+
+| 元素 | 格式 |
+|------|------|
+| 文档标题 | 宋体, 18pt, 加粗, 居中 |
+| 一级标题（一、二、三、四） | 宋体, 16pt, 加粗 |
+| 二级标题（（一）（二）（三）） | 宋体, 14pt, 加粗 |
+| 正文 | 宋体, 12pt |
+| 表格 | 有边框, 表头加粗灰底 |
+| 页边距 | 上下 2.54cm, 左右 3.18cm |
+
+#### 生成步骤
+
+1. **加载 docx skill**：`Skill({ skill: "docx" })`
+2. 创建文档，按 Word 排版规范设置标题、段落、表格
+3. 保存为 `.docx` 文件到项目目录
+4. 使用 `present_files` 交付给用户
+
+**写作规范（必须严格遵守）**：
+
+| 规范 | 说明 |
+|------|------|
+| 从问题切入 | 先讲"当前系统缺什么"再讲"要做什么"，不堆砌功能 |
+| 核心能力前置 | 核心系统能力作为独立一节描述，不要埋没在具体实体配置中 |
+| 分层描述 | 实体类需求按"通用规则 + 各实体差异化参数"分层 |
+| 不私自扩展 | 只写用户给的规则，不猜测未提及的边界条件 |
+| 不塞待确认 | 不出现"待确认列表""建议"等；如需确认某点，在文档输出后单独提问 |
+| 结合截图 | 如有原有系统截图，需求背景中必须具体指出截图里看到的不足 |
+| 结构精简 | 严格四章：背景→目标→详细需求→功能价值，不额外增加章节 |
+
+### Step A3：用户确认
+
+文档输出后，**等待用户确认**。典型交互：
+
+- 用户说"没问题"/"确认"/"OK"/"可以" → 进入 Step A4，开始原型生成
+- 用户说"有个地方不对"/"XX改成YY" → 按用户反馈修改文档后重新确认
+- 用户提出补充内容 → 在文档中追加后重新确认
+
+**确认前不进行任何原型相关工作。**
+
+### Step A4：进入原型生成流程
+
+用户确认业务需求文档后，**跳转到下方「原型生成流程」**，从 Step 0 开始执行。
+
+> **⚠️ 样式传递规则**：如果 Path A 中用户提供了系统截图（Step A0），进入原型生成流程时：
+> - **Step 0 中的参考图检测自动命中**——A0 的系统截图即视为参考图，跳过"询问参考图"环节
+> - **原型样式直接复用 A0.2 中已提取的设计规范**（CSS 变量 + 组件样式），与系统截图保持视觉一致
+> - 仅在以下情况才重新询问参考图：用户明确说"原型不用系统样式，换个风格"或"另外给个参考图"
+
+---
+
+## Path B：直接生成原型（跳过需求文档）
+
+当用户意图是"直接出原型"时，**跳过 Path A 全部步骤**，直接跳转到下方「原型生成流程」从 Step 0 开始执行。
+
+---
+
+## 原型生成流程（Path A 确认后 & Path B 共用）
+
+以下 Step 0 ~ Step 6 为原型生成的标准流程，Path A 确认后和 Path B 均进入此流程。
 
 ### Step 0: 检查参考图 (REFERENCE CHECK — 必须最先执行)
 
@@ -41,6 +247,7 @@ Invoke when the user's request contains:
 
 | 用户输入形式 | 如何处理 |
 |-------------|---------|
+| 当前会话中已通过 Path A Step A0 读取过系统截图（上下文中已有 📐 设计规范） | **自动复用 A0 提取的设计规范作为参考图**，跳过图片读取，直接进入 Step 1。这是最常见的情况，不要再问用户要参考图。 |
 | 消息中直接附带了截图文件（如 @image, 或上传的 PNG/JPG） | **必须使用 Read 工具读取该图片**，从中提取 UI 设计规范 |
 | 消息中提到了"参考图/参照图/原来系统/类似"等字眼，但没看到图片文件 | 用 conversation_search 搜索历史会话中是否有关联的截图；如果找不到，**必须主动询问用户"能否把参考截图发一下？"**，不跳过此步骤 |
 | 消息中有 `@image#` 标记但图片路径不可访问 | **坦诚告知用户图片已无法访问，请重新上传**，然后等待用户重新发送 |
@@ -191,6 +398,32 @@ Follow the template pattern in `references/prototype-guide.md`. The output is a 
 3. Implement all UI components with proper CSS based on the design system (extracted reference styles OR Ant Design defaults)
 4. Add interactivity: tab switching, modal open/close, pagination, form interactions
 5. For PC prototypes, use fixed 1440px width container or full-width responsive
+6. **⚠️ 多页面原型编码规范（当原型包含多个页面时）**：
+   - 每个页面用 `<div class="page-section" id="pageXxxName">` 包裹，默认只有第一个页面有 `active` class
+   - 页面切换 CSS 规则：`.page-section { display: none !important; }` `.page-section.active { display: block !important; }`
+   - 页面切换 JS：在侧边栏/Tab 的点击事件中，先移除所有 `.page-section` 的 `active` class，再给目标页面加上 `active` class，然后**调用 `window.__setActivePage('pageXxxName')` 通知注释引擎切换页面**
+   - 同时暴露 `window.__switchToPage = function(pageId) { ... 切换DOM ...; window.__setActivePage(pageId); }` 供注释引擎的 `__focusAnnotation` 调用（当用户点击面板中属于其他页面的注释时，自动跳转到该页面）
+   - **⚠️ 多屏并排展示模式（Side-by-Side）**：当多个页面需要同时可见时（如登录+注册两个手机并排展示），**不要用 `display: none` 隐藏页面**，而是：
+     - 所有页面同时有 `active` class（都 `display: block`）
+     - 页面间用 flex 横向排列（如 `display: flex; gap: 60px;`）
+     - 页面切换（如"立即注册"→"返回登录"）用 `scrollIntoView({ behavior: 'smooth' })` 滚动定位，而非隐藏/显示
+     - 注释注册前调用 `window.__setMultiScreenMode(true, { 'pageLogin': '📱 登录页', 'pageRegister': '📲 注册页' })` 启用多屏模式
+     - 多屏模式下注释面板自动显示页面筛选 Tab（全部/登录页/注册页）+ 二级分组（页面→类型）
+     - 点击面板注释时自动滚动到对应页面元素，不再切换页面显示/隐藏
+     - **代码模板**：
+       ```js
+       // 启用多屏模式（在注释注册之前调用）
+       window.__setMultiScreenMode(true, {
+         'pageLogin': '📱 登录页',
+         'pageRegister': '📲 注册页'
+       });
+       // 注册注释时仍用 __setActivePage 设置当前页面，注释自动归属
+       window.__setActivePage('pageLogin');
+       window.__addAnnotationOn('#loginPhone', 'right', { title: '...', description: '...', type: 'interaction' });
+       window.__setActivePage('pageRegister');
+       window.__addAnnotationOn('#regPhone', 'right', { title: '...', description: '...', type: 'interaction' });
+       // 注册完毕后不需要切回默认页面（多屏模式下页面切换不影响显示）
+       ```
 
 **Phase B — Annotations**:
 1. Review every functional area on the page
@@ -198,6 +431,7 @@ Follow the template pattern in `references/prototype-guide.md`. The output is a 
 3. Register annotations using **`window.__onAnnotationsReady`** 回调函数（**禁止使用 DOMContentLoaded**，因为框架初始化顺序存在竞争关系）：
    - **`__addAnnotation({ x, y, ... })`** — 手动指定视口坐标 (通用模式)
    - **`__addAnnotationOn(selector, position, opts)`** — 相对目标元素自动定位 (推荐模式)
+   - **`opts.page`** — 注释所属页面 ID（多页面原型时使用，默认为当前活跃页面）
 4. 注释注册代码推荐使用**轮询等待模式**（替代原 `__onAnnotationsReady` 回调方式，避免 DOMContentLoaded 时序竞争）：
 ```js
 (function() {
@@ -207,15 +441,34 @@ Follow the template pattern in `references/prototype-guide.md`. The output is a 
       return;
     }
     // 框架就绪，开始注册注释
+    // ⚠️ 多页面原型：先用 __setActivePage 设置当前页面，再注册注释（注释自动归属当前页面）
+    window.__setActivePage('pageShiftSettings');
     window.__addAnnotationOn('#target-selector', 'right', {
       title: '注释标题',
       description: '注释内容',
       type: 'business'
+      // page 参数会自动取当前活跃页面，无需手动指定
+      // 如果需要全局注释（所有页面可见），显式设置 page: null
     });
+    // 切换到另一个页面注册注释
+    window.__setActivePage('pageAttendanceRecord');
+    window.__addAnnotationOn('#another-selector', 'left', {
+      title: '另一个页面的注释',
+      description: '这个注释只属于考勤记录页面',
+      type: 'interaction'
+    });
+    // 注册完毕后，切回默认页面
+    window.__setActivePage('pageShiftSettings');
   }
   register();
 })();
 ```
+   - **多页面原型注释分组规则**：
+     - 注册注释前先调用 `__setActivePage('pageId')` 设置当前页面，后续注册的注释自动归属该页面
+     - 注释的 `page` 属性为 `null` 时视为全局注释，所有页面都可见
+     - **传统多页模式**（页面切换隐藏/显示）：页面切换时调用 `__setActivePage(newPageId)`，框架自动隐藏/显示注释标记和面板内容
+     - **多屏并排模式**（页面同时可见）：调用 `__setMultiScreenMode(true, { pageId: '标签' })` 后，面板显示页面筛选 Tab + 二级分组；点击面板注释滚动定位到目标元素，不切换页面
+     - 在右侧面板中，传统模式只显示当前页面的注释；多屏模式默认显示全部注释（可按 Tab 筛选单页）
    - **拖拽标记**：按住注释标记（圆形徽章）拖拽即可重新定位
    - **删除注释**：在右侧注释面板中，每项注释末尾的✕按钮可删除注释（卡片上不提供删除按钮以避免事件冲突）
    - **展开卡片**：注释卡片标题栏⛶按钮可展开/缩小卡片（180px↔600px）
@@ -281,6 +534,17 @@ Follow the template pattern in `references/prototype-guide.md`. The output is a 
 - ❌ 只写视觉表现不写逻辑（如"已完成绿色，当前蓝色"→ 缺少数据来源和排序规则）
 - ❌ 字段说明模糊（如"展示审批记录" → 应明确列出所有字段）
 - ❌ 遗漏 edgecase 注释（数据展示类组件必须有空数据/错误态注释）
+
+**⚠️ 关键编码约束 —— description 字段换行转义（已出现多次生产事故）：**
+
+注释注册代码嵌入在 HTML 的 `<script>` 标签中，所有 `description` 字符串必须使用 **JavaScript 单引号字符串**。单引号字符串内不允许包含未转义的**实际换行符**（即按下回车产生的 `\n`），否则会导致整段 `<script>` 解析失败，注释引擎和页面交互全部失效。
+
+| 错误写法（导致脚本崩溃） | 正确写法 |
+|---|---|
+| `description: '第一行`<br>`第二行'` | `description: '第一行\n第二行'` |
+| `description: '【业务】xxx`<br>`【异常】yyy'` | `description: '【业务】xxx\n【异常】yyy'` |
+
+**生成 HTML 时的强制检查**：在输出最终 HTML 之前，必须确保 `<script>` 标签内所有单引号字符串中没有裸换行。如果 description 内容本身包含多行，**必须将实际换行替换为 `\n` 转义序列**。
 
 #### Interaction Fidelity
 
@@ -370,6 +634,6 @@ Auto-detect target platform from user input. If not specified, default to PC Web
 
 ## Bundled Resources
 
-- `assets/prototype-framework.js` — The annotation engine + selection tool + panel. **嵌入方式：在生成的 HTML 中将该文件内容直接内联到 `<script>` 标签中，不使用 data URI（避免部分浏览器对 data URI 脚本的限制）**
+- `assets/prototype-framework.js` — The annotation engine + selection tool + panel (v1.1). **新增多屏并排展示模式**：`__setMultiScreenMode(enabled, pageLabels)` 启用后，注释面板自动显示页面筛选 Tab + 二级分组（页面→类型），点击注释滚动定位而非切换页面。**嵌入方式：在生成的 HTML 中将该文件内容直接内联到 `<script>` 标签中，不使用 data URI（避免部分浏览器对 data URI 脚本的限制）**
 - `references/prototype-guide.md` — Complete guide for building prototypes: template structure, annotation API, design system specs, interaction fidelity rules, multi-platform adaptation, and reference extraction guide.
 - `references/prd-template.md` — Requirements Specification Document (PRD) template referencing Tencent, Alibaba, JD.com formats. Includes full PRD and lightweight PRD templates, annotation-to-PRD mapping rules, and generation workflow.

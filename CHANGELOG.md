@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.2.0 (2026-07-08)
+
+### ✨ 新增功能
+- **多屏并排展示模式（Multi-Screen Mode）**：当原型包含多个页面时，支持将多个手机/页面并排同时展示（如登录+注册并排），而非传统的单页面切换
+  - 新增 `__setMultiScreenMode(enabled, pageLabels)` API，一行调用即可启用
+  - 注释面板自动渲染页面筛选 Tab（全部 / 📱 登录页 / 📲 注册页），切换 Tab 时标记和面板列表同步过滤
+  - 注释面板支持「页面 → 类型」二级分组：先按页面分节，再按注释类型（交互说明/业务逻辑/边界异常）分组
+  - 跨页面注释定位：点击面板中任意注释项，自动 `scrollIntoView` 滚动到对应屏幕并高亮目标元素
+  - 向后兼容：不调用 `__setMultiScreenMode` 时，行为与 v1.1 完全一致（传统单页切换模式不受影响）
+- **SKILL.md 多屏模式编码规范**：新增完整的多屏并排模式代码模板和 API 使用说明
+- **prototype-guide.md 多屏指南**：新增「多屏并排展示模式」章节，含使用场景判断、布局模板、滚动定位、注释注册示例、面板行为对比表、API 速查表
+
+### 🐛 Bug 修复
+- **多页原型注册页空白问题**：多页面原型中，非首个页面（如注册页）的 `<div class="page-section">` 缺少 `active` class，被 CSS `.page-section { display: none !important; }` 隐藏。修复方案：多屏模式下所有页面均添加 `active` class，始终可见
+- **页面切换导致对方消失**：传统 `switchToRegister/switchToLogin` 通过移除/添加 `active` class 来切换页面，在并排展示时会导致一个页面消失。修复方案：多屏模式下切换逻辑改为 `scrollIntoView` 滚动定位，不再隐藏/显示页面
+- **注释面板只显示单页注释**：`renderPanel` 按 `_activePage` 过滤注释，导致并排展示时面板只显示一半注释且无法区分归属。修复方案：多屏模式下面板按「页面 → 类型」二级分组，默认「全部」模式显示所有注释
+
+### 🔧 优化
+- **`__focusAnnotation` 滚动定位**：多屏模式下点击面板注释项时，直接 `scrollIntoView` 滚动到目标元素并高亮，不再触发页面切换
+- **`updateAnnotationVisibility` 支持 `_pageFilter`**：新增页面筛选逻辑，支持「全部 / 指定页面」两种过滤模式
+- **注释注册默认不再切回登录页**：多屏模式下注释注册完毕后不再调用 `setActivePage('pageLogin')`，避免面板被过滤到单页
+
 ## v1.1.0 (2026-06-25)
 
 ### ✨ 新增功能

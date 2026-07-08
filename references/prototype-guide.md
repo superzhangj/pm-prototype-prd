@@ -323,7 +323,125 @@ __addAnnotationOn('#目标元素CSS选择器', '位置', {
 - 如果标记会遮挡重要内容，放在相对空旷的一侧
 - 多个标记在同一区域时，沿对角线错开排列
 
-## 框选工具与AI回传机制
+## 多屏并排展示模式（Side-by-Side Multi-Screen）
+
+当原型包含多个页面且需要**同时可见**时（如移动端登录+注册两个手机并排展示），使用多屏并排模式。
+
+### 何时使用
+
+| 场景 | 模式 | 说明 |
+|------|------|------|
+| PC 后台多 Tab 页面切换 | 传统多页模式 | 侧边栏点击切换，同时只显示一个页面 |
+| 移动端登录+注册并排 | **多屏并排模式** | 两个手机同时可见，点击"注册"滚动到右侧 |
+| 流程对比（如审批前后） | **多屏并排模式** | 左右并排展示流程变更前后状态 |
+| 单页面 | 单页模式 | 默认，无需特殊处理 |
+
+### 布局模板
+
+```html
+<!-- 多屏容器：flex 横向排列 -->
+<div style="display:flex; gap:60px; justify-content:center; padding:40px 20px;">
+
+  <!-- 屏幕 1：登录页 -->
+  <div class="phone-mockup page-section active" id="pageLogin">
+    <!-- 手机外框 + 页面内容 -->
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <!-- 登录页 UI -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 屏幕 2：注册页 -->
+  <div class="phone-mockup page-section active" id="pageRegister">
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <!-- 注册页 UI -->
+      </div>
+    </div>
+  </div>
+
+</div>
+```
+
+**关键区别**：
+- 传统多页模式：`page-section` 默认 `display: none`，只有 `.active` 为 `display: block`
+- 多屏并排模式：**所有** `page-section` 都有 `active` class（都 `display: block`），用 flex 横向排列
+
+### 页面切换（滚动定位）
+
+```javascript
+// 点击"立即注册" → 滚动到注册页
+function switchToRegister() {
+  document.getElementById('pageRegister').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// 点击"返回登录" → 滚动到登录页
+function switchToLogin() {
+  document.getElementById('pageLogin').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+```
+
+### 启用多屏模式 + 注册注释
+
+```javascript
+(function() {
+  function register() {
+    if (typeof window.__setMultiScreenMode !== 'function') {
+      setTimeout(register, 50);
+      return;
+    }
+
+    // ① 启用多屏模式，传入页面标签（Tab 显示用）
+    window.__setMultiScreenMode(true, {
+      'pageLogin': '📱 登录页',
+      'pageRegister': '📲 注册页'
+    });
+
+    // ② 设置当前页面 → 注册的注释自动归属该页面
+    window.__setActivePage('pageLogin');
+    window.__addAnnotationOn('#loginPhone', 'right', {
+      title: '手机号输入',
+      description: '输入11位手机号，实时格式校验',
+      type: 'interaction'
+    });
+    // ... 更多登录页注释
+
+    // ③ 切换到注册页注册注释
+    window.__setActivePage('pageRegister');
+    window.__addAnnotationOn('#regPhone', 'right', {
+      title: '手机号注册',
+      description: '输入手机号，格式校验 + 已注册检测',
+      type: 'interaction'
+    });
+    // ... 更多注册页注释
+
+    // ④ 多屏模式下不需要切回默认页面
+    // （传统多页模式需要切回：window.__setActivePage('pageLogin');）
+  }
+  register();
+})();
+```
+
+### 多屏模式下的注释面板行为
+
+| 行为 | 传统多页模式 | 多屏并排模式 |
+|------|-------------|-------------|
+| 面板顶部 Tab | 无 | 全部 / 📱 登录页 / 📲 注册页 |
+| 面板分组 | 按类型一级分组 | 按页面 → 类型二级分组 |
+| 默认显示 | 当前页面注释 | **全部注释** |
+| 点击面板注释 | 切换到目标页面 → 高亮 | **滚动定位**到目标元素 → 高亮 |
+| 标记可见性 | 只有当前页面的可见 | 全部可见（可按 Tab 筛选） |
+
+### API 速查
+
+| API | 说明 |
+|-----|------|
+| `window.__setMultiScreenMode(enabled, pageLabels)` | 启用/禁用多屏模式。`pageLabels` 为 `{ pageId: '显示标签' }` |
+| `window.__setPageFilter(filter)` | 切换面板筛选。`'all'` 或具体 `pageId` |
+| `window.__setActivePage(pageId)` | 设置当前页面（注册注释时用），多屏模式下不影响显示，只影响注释归属 |
+
+
 
 生成原型时，框选工具（Selection Tool）默认通过 prototype-framework.js 自动启用。
 

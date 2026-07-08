@@ -4,7 +4,7 @@
  * 
  * 用法: 在生成的 HTML 原型中引入本脚本，通过 window.__PrototypeAnnotations API 添加注释
  *
- * @version 1.0
+ * @version 1.1 — 新增多屏并排展示模式（__setMultiScreenMode）
  */
 
 (function () {
@@ -35,6 +35,12 @@
   let _selectionActive = false;
   let _addAnnotationActive = false;
   let _panelVisible = true;
+  // ⚠️ Bug Fix: 多页面原型注释分组 - 当前活跃页面 ID
+  let _activePage = null;
+  // 多屏并排展示模式：多个页面同时可见（如登录+注册并排），注释面板按页面分组
+  let _multiScreenMode = false;
+  let _pageFilter = 'all'; // 'all' 或具体 pageId
+  let _pageLabels = {}; // { pageId: '显示标签' }
 
   // ============================================================
   // 获取下一个可用的注释编号（修复：删除后自动复用被删掉的编号）
@@ -64,6 +70,11 @@
     window.__toggleSelectionTool = toggleSelectionTool;
     window.__setPanelVisible = function (v) { _panelVisible = v; };
     window.__showFloatingTip = showFloatingTip;
+    // ⚠️ Bug Fix: 多页面原型注释分组 - 设置当前活跃页面
+    window.__setActivePage = setActivePage;
+    // 多屏并排展示模式 API
+    window.__setMultiScreenMode = setMultiScreenMode;
+    window.__setPageFilter = setPageFilter;
 
     // 触发就绪回调：确保注释注册在框架初始化完成后执行
     if (typeof window.__onAnnotationsReady === 'function') {
@@ -417,6 +428,53 @@
         font-size: 14px;
       }
 
+      /* --- 页面筛选 Tab（多屏并排模式） --- */
+      .apt-panel-tabs {
+        display: flex;
+        gap: 0;
+        padding: 0 12px;
+        border-bottom: 1px solid #f0f0f0;
+        flex-shrink: 0;
+        overflow-x: auto;
+      }
+      .apt-panel-tab {
+        padding: 8px 14px;
+        font-size: 12px;
+        color: #8c8c8c;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        border-bottom: 2px solid transparent;
+        transition: all 0.15s;
+        white-space: nowrap;
+        font-family: inherit;
+      }
+      .apt-panel-tab:hover { color: #595959; }
+      .apt-panel-tab.active {
+        color: #1677ff;
+        border-bottom-color: #1677ff;
+        font-weight: 600;
+      }
+      /* --- 页面分节标题（多屏并排模式 renderPanel 二级分组） --- */
+      .apt-panel-page-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 16px 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #262626;
+        background: #fafafa;
+        border-top: 1px solid #f0f0f0;
+        border-bottom: 1px solid #f0f0f0;
+      }
+      .apt-panel-page-header .apt-panel-page-count {
+        font-size: 11px;
+        font-weight: 400;
+        color: #8c8c8c;
+        margin-left: auto;
+      }
+
       /* --- 框选工具 --- */
       .apt-selector {
         position: fixed;
@@ -646,6 +704,7 @@
         </div>
         <button class="apt-panel-close" id="aptPanelClose">✕</button>
       </div>
+      <div class="apt-panel-tabs" id="aptPanelTabs" style="display:none;"></div>
       <div class="apt-panel-body" id="aptPanelBody">
         <div class="apt-panel-empty">暂无注释</div>
       </div>
@@ -658,48 +717,186 @@
     };
   }
 
+  // ============================================================
+  // ⚠️ Bug Fix: 多页面原型注释分组 - 页面切换时过滤注释可见性
+  // ============================================================
+  function setActivePage(pageId) {
+    _activePage = pageId;
+    if (!_multiScreenMode) {
+      updateAnnotationVisibility();
+      renderPanel();
+    }
+  }
+
+  // ============================================================
+  // 多屏并排展示模式：多个页面同时可见，注释面板按页面分组
+  // ============================================================
+  function setMultiScreenMode(enabled, pageLabels) {
+    _multiScreenMode = !!enabled;
+    _pageLabels = pageLabels || {};
+    _pageFilter = 'all';
+    // 渲染页面筛选 Tab
+    renderPanelTabs();
+    // 多屏模式下所有注释标记都可见（因为所有页面都同时显示）
+    updateAnnotationVisibility();
+    renderPanel();
+  }
+
+  function setPageFilter(filter) {
+    _pageFilter = filter || 'all';
+    // 更新 Tab 高亮
+    document.querySelectorAll('.apt-panel-tab').forEach(function(tab) {
+      tab.classList.toggle('active', tab.dataset.pageFilter === _pageFilter);
+    });
+    updateAnnotationVisibility();
+    renderPanel();
+  }
+
+  function renderPanelTabs() {
+    var tabsEl = document.getElementById('aptPanelTabs');
+    if (!tabsEl) return;
+    if (!_multiScreenMode || Object.keys(_pageLabels).length === 0) {
+      tabsEl.style.display = 'none';
+      tabsEl.innerHTML = '';
+      return;
+    }
+    tabsEl.style.display = 'flex';
+    var html = '<button class="apt-panel-tab' + (_pageFilter === 'all' ? ' active' : '') + '" data-page-filter="all" onclick="window.__setPageFilter(\'all\')">全部</button>';
+    Object.keys(_pageLabels).forEach(function(pageId) {
+      html += '<button class="apt-panel-tab' + (_pageFilter === pageId ? ' active' : '') + '" data-page-filter="' + pageId + '" onclick="window.__setPageFilter(\'' + pageId + '\')">' + escapeHtml(_pageLabels[pageId]) + '</button>';
+    });
+    tabsEl.innerHTML = html;
+  }
+
+  function updateAnnotationVisibility() {
+    // 多屏并排模式：所有页面同时可见，按 _pageFilter 过滤标记显示
+    if (_multiScreenMode) {
+      _annotations.forEach(function(a) {
+        var marker = document.querySelector('.apt-marker[data-aid="' + a.id + '"]');
+        if (marker) {
+          var visible = (_pageFilter === 'all') || (!a.page) || (a.page === _pageFilter);
+          marker.style.display = visible ? '' : 'none';
+        }
+        var card = document.getElementById('aptCard_' + a.id);
+        if (card) {
+          var visible = (_pageFilter === 'all') || (!a.page) || (a.page === _pageFilter);
+          if (!visible) card.classList.remove('visible');
+        }
+      });
+      return;
+    }
+    // 单页/传统多页模式
+    if (!_activePage) {
+      document.querySelectorAll('.apt-marker').forEach(function(m) { m.style.display = ''; });
+      return;
+    }
+    _annotations.forEach(function(a) {
+      var marker = document.querySelector('.apt-marker[data-aid="' + a.id + '"]');
+      if (marker) {
+        var visible = (!a.page) || (a.page === _activePage);
+        marker.style.display = visible ? '' : 'none';
+      }
+      var card = document.getElementById('aptCard_' + a.id);
+      if (card) {
+        var visible = (!a.page) || (a.page === _activePage);
+        if (!visible) card.classList.remove('visible');
+      }
+    });
+  }
+
   function renderPanel() {
     const body = document.getElementById('aptPanelBody');
     if (!body) return;
     const count = document.getElementById('aptCount');
-    if (count) count.textContent = _annotations.length + ' 条';
 
-    if (_annotations.length === 0) {
-      body.innerHTML = '<div class="apt-panel-empty">暂无注释</div>';
+    // === 多屏并排模式 ===
+    if (_multiScreenMode) {
+      var visibleAnnotations;
+      if (_pageFilter === 'all') {
+        visibleAnnotations = _annotations;
+      } else {
+        visibleAnnotations = _annotations.filter(function(a) { return !a.page || a.page === _pageFilter; });
+      }
+      if (count) {
+        count.textContent = _pageFilter === 'all'
+          ? _annotations.length + ' 条'
+          : visibleAnnotations.length + ' 条（' + (_pageLabels[_pageFilter] || _pageFilter) + '）';
+      }
+      if (visibleAnnotations.length === 0) {
+        body.innerHTML = '<div class="apt-panel-empty">暂无注释</div>';
+        return;
+      }
+      // 二级分组：页面 → 类型
+      var html = '';
+      var pageIds = _pageFilter === 'all' ? Object.keys(_pageLabels) : [_pageFilter];
+      // 全局注释（page 为 null）单独一组
+      var globalItems = visibleAnnotations.filter(function(a) { return !a.page; });
+      var typeOrder = ['interaction', 'business', 'edgecase', 'permission', 'note'];
+      // 先渲染全局注释
+      if (globalItems.length > 0 && _pageFilter === 'all') {
+        html += '<div class="apt-panel-page-header"><span>🌐 全局</span><span class="apt-panel-page-count">' + globalItems.length + ' 条</span></div>';
+        html += renderTypeGroups(globalItems, typeOrder);
+      }
+      // 再渲染各页面注释
+      pageIds.forEach(function(pageId) {
+        var pageItems = visibleAnnotations.filter(function(a) { return a.page === pageId; });
+        if (pageItems.length === 0) return;
+        html += '<div class="apt-panel-page-header"><span>' + escapeHtml(_pageLabels[pageId] || pageId) + '</span><span class="apt-panel-page-count">' + pageItems.length + ' 条</span></div>';
+        html += renderTypeGroups(pageItems, typeOrder);
+      });
+      body.innerHTML = html;
       return;
     }
 
-    // 按类型分组
-    const groups = {};
-    _annotations.forEach(a => {
+    // === 单页 / 传统多页模式 ===
+    var visibleAnnotations2;
+    if (_activePage) {
+      visibleAnnotations2 = _annotations.filter(function(a) {
+        return !a.page || a.page === _activePage;
+      });
+    } else {
+      visibleAnnotations2 = _annotations;
+    }
+
+    if (count) {
+      if (_activePage) {
+        count.textContent = visibleAnnotations2.length + ' 条（当前页面）';
+      } else {
+        count.textContent = _annotations.length + ' 条';
+      }
+    }
+
+    if (visibleAnnotations2.length === 0 && _annotations.length === 0) {
+      body.innerHTML = '<div class="apt-panel-empty">暂无注释</div>';
+      return;
+    }
+    if (visibleAnnotations2.length === 0 && _annotations.length > 0) {
+      body.innerHTML = '<div class="apt-panel-empty">当前页面无注释\n<div style="font-size:12px;color:#bfbfbf;margin-top:8px;">共 ' + _annotations.length + ' 条注释在其他页面</div></div>';
+      return;
+    }
+
+    body.innerHTML = renderTypeGroups(visibleAnnotations2, ['interaction', 'business', 'edgecase', 'permission', 'note']);
+  }
+
+  // 辅助：按类型渲染注释分组 HTML
+  function renderTypeGroups(items, typeOrder) {
+    var groups = {};
+    items.forEach(function(a) {
       if (!groups[a.type]) groups[a.type] = [];
       groups[a.type].push(a);
     });
-
-    let html = '';
-    const typeOrder = ['interaction', 'business', 'edgecase', 'permission', 'note'];
-    typeOrder.forEach(type => {
-      const items = groups[type];
-      if (!items || items.length === 0) return;
-      const color = CONFIG.annotationColor[type] || '#1677ff';
-      html += `<div class="apt-panel-group">
-        <div class="apt-panel-group-title">
-          <span class="apt-panel-group-dot" style="background:${color}"></span>
-          ${CONFIG.annotationLabel[type] || type} (${items.length})
-        </div>`;
-      items.forEach(a => {
-        html += `<div class="apt-panel-item" data-aid="${a.id}" onclick="window.__focusAnnotation(${a.id})">
-          <span class="apt-panel-item-badge" style="background:${color}">${a.id}</span>
-          <div class="apt-panel-item-content">
-            <div class="apt-panel-item-title">${escapeHtml(a.title)}</div>
-            <div class="apt-panel-item-desc">${escapeHtml(a.description)}</div>
-          </div>
-          <span class="apt-panel-item-del" onclick="event.stopPropagation();window.__deleteAnnotation(${a.id})" title="删除注释" style="flex-shrink:0;width:20px;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#bfbfbf;border-radius:4px;font-size:12px;transition:color .15s,background .15s;margin-left:4px;" onmouseover="this.style.color='#ff4d4f';this.style.background='#fff1f0'" onmouseout="this.style.color='#bfbfbf';this.style.background='transparent'">✕</span>
-        </div>`;
+    var html = '';
+    typeOrder.forEach(function(type) {
+      var typeItems = groups[type];
+      if (!typeItems || typeItems.length === 0) return;
+      var color = CONFIG.annotationColor[type] || '#1677ff';
+      html += '<div class="apt-panel-group"><div class="apt-panel-group-title"><span class="apt-panel-group-dot" style="background:' + color + '"></span>' + (CONFIG.annotationLabel[type] || type) + ' (' + typeItems.length + ')</div>';
+      typeItems.forEach(function(a) {
+        html += '<div class="apt-panel-item" data-aid="' + a.id + '" onclick="window.__focusAnnotation(' + a.id + ')"><span class="apt-panel-item-badge" style="background:' + color + '">' + a.id + '</span><div class="apt-panel-item-content"><div class="apt-panel-item-title">' + escapeHtml(a.title) + '</div><div class="apt-panel-item-desc">' + escapeHtml(a.description) + '</div></div><span class="apt-panel-item-del" onclick="event.stopPropagation();window.__deleteAnnotation(' + a.id + ')" title="删除" style="flex-shrink:0;width:20px;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#bfbfbf;border-radius:4px;font-size:12px;transition:color .15s,background .15s;margin-left:4px;" onmouseover="this.style.color=\'#ff4d4f\';this.style.background=\'#fff1f0\'" onmouseout="this.style.color=\'#bfbfbf\';this.style.background=\'transparent\'">✕</span></div>';
       });
       html += '</div>';
     });
-    body.innerHTML = html;
+    return html;
   }
 
   // ============================================================
@@ -712,6 +909,7 @@
       title: '未命名注释',
       description: '请补充说明',
       type: 'interaction', // interaction | business | edgecase | permission | note
+      page: _activePage, // ⚠️ Bug Fix: 多页面原型 - 注释所属页面 ID，默认为当前活跃页面
       x: 100,
       y: 100,
       targetSelector: null,
@@ -954,6 +1152,18 @@
   // 注释卡片切换
   // ============================================================
   window.__focusAnnotation = function (id) {
+    const a = _annotations.find(x => x.id === id);
+    // 多屏并排模式：不切换页面，直接滚动定位
+    if (!_multiScreenMode) {
+      // 传统多页模式：如果注释属于其他页面，先切换页面
+      if (a && a.page && a.page !== _activePage && _activePage) {
+        if (typeof window.__switchToPage === 'function') {
+          window.__switchToPage(a.page);
+        } else {
+          setActivePage(a.page);
+        }
+      }
+    }
     // 关闭其他卡片
     document.querySelectorAll('.apt-card.visible').forEach(c => c.classList.remove('visible'));
     document.querySelectorAll('.apt-panel-item.active').forEach(c => c.classList.remove('active'));
@@ -966,8 +1176,7 @@
       item.classList.add('active');
       item.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    // 高亮目标元素
-    const a = _annotations.find(x => x.id === id);
+    // 高亮目标元素并滚动到该位置
     if (a && a.targetSelector) {
       const el = document.querySelector(a.targetSelector);
       if (el) {
@@ -1153,6 +1362,8 @@
         panel.style.cssText = 'position:fixed;top:76px;left:50%;transform:translateX(-50%);z-index:99999;background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.18);border:1px solid #e8e8e8;padding:16px 20px;width:520px;max-width:90vw;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;';
         document.body.appendChild(panel);
       }
+      // ⚠️ Bug Fix: 关闭按钮设置 display:none 后，第二次弹出需要重置为可见
+      panel.style.display = '';
       panel.innerHTML = ''
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #f0f0f0;">'
         + '<span style="font-size:18px;">✂️</span>'
